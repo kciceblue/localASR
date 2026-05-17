@@ -248,15 +248,22 @@ pub async fn paste_probe(platform: Arc<dyn Platform>) -> Result<()> {
     Ok(())
 }
 
-/// Probe: try to start a hotkey listener for a sentinel binding ("F12" — the
-/// highest-numbered F-key accepted by our binding parser, unlikely to be in
-/// normal use). Success means the listener thread started without erroring
-/// (uinput permissions OK on Linux, hook installation OK on Windows).
-/// The receiver is dropped immediately — we don't wait for events.
+/// Probe: validate that the configured hotkey binding string parses and that
+/// the platform's `hotkey_stream` constructor returns without error.
+///
+/// LIMITATION: on both Linux and Windows the heavy lifting (opening
+/// `/dev/input/event*` devices on Linux, installing the low-level keyboard
+/// hook on Windows) happens in a background thread spawned by `hotkey_stream`,
+/// so device-permission failures do NOT surface to this probe. A future
+/// `Platform::check_hotkey_ready` method should perform a synchronous
+/// readiness check; until then, this probe only catches binding-string typos.
+///
+/// We use "F12" as the sentinel because it is the highest-numbered F-key
+/// accepted by the binding parser (the parser supports F1–F12).
 pub async fn hotkey_probe(platform: Arc<dyn Platform>) -> Result<()> {
     let _rx = platform.hotkey_stream("F12")
-        .context("starting hotkey listener (check /dev/input permissions on Linux)")?;
-    // _rx is dropped here, stopping the listener thread on next iteration.
+        .context("parsing sentinel hotkey binding")?;
+    // _rx is dropped here, stopping the listener thread when its sender side errors.
     Ok(())
 }
 

@@ -39,7 +39,7 @@ Probes (in order):
 - `editor endpoint` — ask the editor for a one-word completion
 - `microphone` — open the configured input device and wait for the first frame (up to 2s)
 - `clipboard` — read and restore the clipboard via the configured platform
-- `hotkey listener` — start a sentinel-binding listener (checks /dev/input permissions on Linux)
+- `hotkey listener` — validate the binding string parses and the listener constructor returns without error (does not currently verify device permissions; see issue tracker for follow-up)
 
 Exits 0 on all-pass, 1 if any check fails.
 

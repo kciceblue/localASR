@@ -12,6 +12,7 @@ pub struct WizardApp {
     pub runtime: WizardRuntime,
     pub mic: MicStepState,
     pub asr: steps::asr::AsrStepState,
+    pub editor: steps::editor::EditorStepState,
 }
 
 impl WizardApp {
@@ -21,6 +22,7 @@ impl WizardApp {
             runtime,
             mic: MicStepState::default(),
             asr: steps::asr::AsrStepState::default(),
+            editor: steps::editor::EditorStepState::default(),
         }
     }
 }
@@ -45,6 +47,12 @@ impl eframe::App for WizardApp {
             WizardStep::Asr => {
                 steps::asr::render(&mut self.state, &mut self.asr, &self.runtime.handle, ui)
             }
+            WizardStep::Editor => steps::editor::render(
+                &mut self.state,
+                &mut self.editor,
+                &self.runtime.handle,
+                ui,
+            ),
             WizardStep::Done => {
                 ui.heading("done");
                 ui.label("close this window and run `localasr daemon`.");

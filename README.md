@@ -25,6 +25,24 @@ Then add yourself to the `input` group (log out and back in to apply):
 sudo usermod -aG input $USER
 ```
 
+## Diagnostics
+
+Run `localasr doctor` after editing your config to verify all components work:
+
+```
+localasr doctor
+```
+
+Probes (in order):
+- `config` — the TOML file exists and parses
+- `asr endpoint` — round-trip a 0.5s silence sample to `/v1/audio/transcriptions`
+- `editor endpoint` — ask the editor for a one-word completion
+- `microphone` — open the configured input device and wait for the first frame (up to 2s)
+- `clipboard` — read and restore the clipboard via the configured platform
+- `hotkey listener` — start a sentinel-binding listener (checks /dev/input permissions on Linux)
+
+Exits 0 on all-pass, 1 if any check fails.
+
 ## Manual verification checklist (Plan 1)
 
 Before tagging a release, all four must pass:

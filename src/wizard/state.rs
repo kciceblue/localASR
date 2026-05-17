@@ -206,5 +206,9 @@ mod cfg_tests {
         assert_eq!(parsed.hotkey.binding, "F8");
         assert_eq!(parsed.asr.model, "whisper-1");
         assert_eq!(parsed.editor.model, "gpt-4o-mini");
+        assert_eq!(parsed.vad.backend, crate::config::VadBackend::Silero);
+        assert_eq!(parsed.injection.mode, "clipboard_paste");
+        assert_eq!(parsed.vad.min_silence_ms, 400);
+        assert_eq!(parsed.editor.light.enabled, true);
     }
 }

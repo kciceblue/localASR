@@ -23,53 +23,70 @@ pub fn render(
 ) -> Option<WizardStep> {
     ui.heading("save");
     ui.add_space(8.0);
-    ui.label("review the config below, then write it to disk.");
-    ui.add_space(8.0);
 
     let cfg = state.to_config();
     let preview =
         toml::to_string_pretty(&cfg).unwrap_or_else(|e| format!("(serialization error: {e})"));
-
-    // Scrollable monospace preview. TextEdit::multiline needs &mut String;
-    // we clone into a throwaway so user edits in the widget don't escape.
+    ui.label("config.toml preview:");
     egui::ScrollArea::vertical()
-        .max_height(280.0)
+        .max_height(200.0)
         .show(ui, |ui| {
             ui.add(
                 egui::TextEdit::multiline(&mut preview.clone())
-                    .font(egui::TextStyle::Monospace)
-                    .desired_rows(12)
-                    .desired_width(f32::INFINITY),
+                    .desired_rows(8)
+                    .desired_width(f32::INFINITY)
+                    .font(egui::TextStyle::Monospace),
             );
         });
 
     ui.add_space(8.0);
 
+    let mut auto_advance: Option<WizardStep> = None;
     if ui.button("save and finish").clicked() {
-        step_state.last_save_result = Some(save_config(&cfg).map_err(|e| format!("{e:#}")));
+        match save_config(&cfg) {
+            Ok(path) => {
+                step_state.last_save_result = Some(Ok(path));
+                auto_advance = Some(WizardStep::Done);
+            }
+            Err(e) => {
+                step_state.last_save_result = Some(Err(format!("{e:#}")));
+            }
+        }
     }
 
-    ui.add_space(8.0);
-    match &step_state.last_save_result {
-        Some(Ok(path)) => {
-            ui.colored_label(
-                egui::Color32::from_rgb(0, 160, 0),
-                format!("\u{2713} saved to {}", path.display()),
-            );
-            ui.label("now run `localasr daemon` to start the hotkey-driven dictation loop.");
+    if let Some(r) = &step_state.last_save_result {
+        match r {
+            Ok(path) => {
+                ui.colored_label(
+                    egui::Color32::from_rgb(80, 200, 120),
+                    format!("\u{2713} saved to {}", path.display()),
+                );
+                ui.label("close this window and run: localasr daemon");
+            }
+            Err(e) => {
+                ui.colored_label(
+                    egui::Color32::from_rgb(220, 80, 80),
+                    format!("\u{2717} {e}"),
+                );
+            }
         }
-        Some(Err(e)) => {
-            ui.colored_label(egui::Color32::from_rgb(200, 0, 0), format!("\u{2717} {e}"));
-        }
-        None => {}
     }
 
-    let next = if matches!(step_state.last_save_result, Some(Ok(_))) {
-        Some(WizardStep::Done)
-    } else {
-        None
-    };
-    nav(ui, WizardStep::Test, next)
+    // If we just saved successfully this frame, auto-advance. Otherwise allow
+    // Back/Next normally; Next stays disabled until a successful save.
+    if auto_advance.is_some() {
+        return auto_advance;
+    }
+    let next_ok = step_state
+        .last_save_result
+        .as_ref()
+        .map(|r| r.is_ok())
+        .unwrap_or(false);
+    nav(
+        ui,
+        WizardStep::Test,
+        if next_ok { Some(WizardStep::Done) } else { None },
+    )
 }
 
 fn save_config(cfg: &crate::config::Config) -> Result<PathBuf> {

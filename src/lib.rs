@@ -5,3 +5,4 @@ pub mod daemon;
 pub mod doctor;
 pub mod platform;
 pub mod terms;
+pub mod wizard;

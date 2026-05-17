@@ -46,9 +46,17 @@ pub fn render(
 
     // Poll pending test result
     if let Some(rx) = step_state.pending.as_mut() {
-        if let Ok(result) = rx.try_recv() {
-            state.asr_test_result = Some(result);
-            step_state.pending = None;
+        use tokio::sync::oneshot::error::TryRecvError;
+        match rx.try_recv() {
+            Ok(result) => {
+                state.asr_test_result = Some(result);
+                step_state.pending = None;
+            }
+            Err(TryRecvError::Empty) => {} // still in flight
+            Err(TryRecvError::Closed) => {
+                state.asr_test_result = Some(Err("test task crashed before reporting".into()));
+                step_state.pending = None;
+            }
         }
     }
 

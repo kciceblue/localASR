@@ -1,3 +1,4 @@
+pub mod asr;
 pub mod mic;
 pub mod welcome;
 

@@ -11,6 +11,7 @@ pub struct WizardApp {
     pub state: WizardState,
     pub runtime: WizardRuntime,
     pub mic: MicStepState,
+    pub asr: steps::asr::AsrStepState,
 }
 
 impl WizardApp {
@@ -19,6 +20,7 @@ impl WizardApp {
             state: WizardState::new(),
             runtime,
             mic: MicStepState::default(),
+            asr: steps::asr::AsrStepState::default(),
         }
     }
 }
@@ -39,6 +41,9 @@ impl eframe::App for WizardApp {
                 ui.ctx()
                     .request_repaint_after(std::time::Duration::from_millis(50));
                 steps::mic::render(&mut self.state, &mut self.mic, ui)
+            }
+            WizardStep::Asr => {
+                steps::asr::render(&mut self.state, &mut self.asr, &self.runtime.handle, ui)
             }
             WizardStep::Done => {
                 ui.heading("done");

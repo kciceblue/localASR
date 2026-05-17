@@ -19,7 +19,24 @@ pub struct WizardState {
     /// Selected input device name; empty string = system default. Populated by
     /// the Mic step and persisted across back/forward navigation.
     pub mic_device: String,
-    // Additional fields land in later tasks as their steps need them.
+
+    // ASR endpoint
+    pub asr_base_url: String,
+    pub asr_api_key: String,
+    pub asr_model: String,
+    pub asr_test_result: Option<Result<(), String>>,
+
+    // Editor endpoint
+    pub editor_base_url: String,
+    pub editor_api_key: String,
+    pub editor_model: String,
+    pub editor_test_result: Option<Result<(), String>>,
+
+    // Hotkey
+    pub hotkey_binding: String,
+
+    // Test step
+    pub test_transcript: Option<String>,
 }
 
 impl Default for WizardStep {
@@ -30,7 +47,14 @@ impl Default for WizardStep {
 
 impl WizardState {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            asr_base_url: "https://api.openai.com/v1".into(),
+            asr_model: "whisper-1".into(),
+            editor_base_url: "https://api.openai.com/v1".into(),
+            editor_model: "gpt-4o-mini".into(),
+            hotkey_binding: "RightCtrl".into(),
+            ..Default::default()
+        }
     }
 }
 

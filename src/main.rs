@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command.unwrap_or(Cmd::Daemon) {
         Cmd::Daemon => run_daemon().await,
-        Cmd::Setup => anyhow::bail!("`localasr setup` lands in Plan 3"),
+        Cmd::Setup => localasr::wizard::run(),
         Cmd::Doctor => run_doctor().await,
         Cmd::Extract { .. } => anyhow::bail!("`localasr extract` lands in Plan 4"),
     }

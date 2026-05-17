@@ -25,6 +25,25 @@ Then add yourself to the `input` group (log out and back in to apply):
 sudo usermod -aG input $USER
 ```
 
+## Setup wizard
+
+First-time users should run:
+
+```
+localasr setup
+```
+
+This launches a GUI wizard (egui) that walks through:
+
+1. Pick a microphone (with a live "speak now" level meter)
+2. Configure the ASR endpoint URL/key/model and verify with a test request
+3. Configure the editor endpoint and verify
+4. Record your push-to-talk hotkey
+5. Record a 5-second speech sample to verify the full pipeline
+6. Save your `config.toml` to the platform's default config path
+
+The wizard writes a complete `config.toml` to `~/.config/localasr/config.toml` (Linux) or `%APPDATA%\localasr\config.toml` (Windows).
+
 ## Diagnostics
 
 Run `localasr doctor` after editing your config to verify all components work:

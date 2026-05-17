@@ -32,6 +32,7 @@ pub async fn run(folder: &Path, out_path: &Path, editor_cfg: EditorConfig) -> Re
         for (i, chunk) in chunks.iter().enumerate() {
             let source_hint = format!("{display}:{i}");
             tracing::info!("extract: {source_hint} ({} bytes)", chunk.len());
+            eprintln!("  extract: {source_hint} ({} bytes)", chunk.len());
             match client.extract(chunk, &source_hint).await {
                 Ok(terms) => {
                     merger::merge_into(&mut db, terms);

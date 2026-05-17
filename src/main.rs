@@ -13,7 +13,13 @@ enum Cmd {
     Daemon,
     Setup,
     Doctor,
-    Extract { folder: String },
+    Extract {
+        /// Folder to scan (recursive, respects .gitignore).
+        folder: String,
+        /// Output path for terms.toml. Defaults to `[terms].path` from config.
+        #[arg(long)]
+        out: Option<String>,
+    },
 }
 
 #[tokio::main]
@@ -28,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
         Cmd::Daemon => run_daemon().await,
         Cmd::Setup => localasr::wizard::run(),
         Cmd::Doctor => run_doctor().await,
-        Cmd::Extract { .. } => anyhow::bail!("`localasr extract` lands in Plan 4"),
+        Cmd::Extract { folder, out } => run_extract(folder, out).await,
     }
 }
 
@@ -96,6 +102,34 @@ async fn run_doctor() -> anyhow::Result<()> {
     } else {
         anyhow::bail!("{failures} check(s) failed")
     }
+}
+
+async fn run_extract(folder: String, out: Option<String>) -> anyhow::Result<()> {
+    let folder = std::path::PathBuf::from(folder);
+
+    // Editor config is always required (extract uses the editor endpoint).
+    let cfg_path = localasr::config::default_config_path()?;
+    if !cfg_path.exists() {
+        anyhow::bail!(
+            "No config at {}. Extract needs the [editor] section. Run `localasr setup`.",
+            cfg_path.display()
+        );
+    }
+    let cfg = localasr::config::load(&cfg_path)?;
+
+    // Resolve output path: --out flag wins; else config's [terms].path.
+    let out_path = match out {
+        Some(p) => std::path::PathBuf::from(shellexpand::tilde(&p).to_string()),
+        None => std::path::PathBuf::from(shellexpand::tilde(&cfg.terms.path).to_string()),
+    };
+
+    let chunks = localasr::extract::run(&folder, &out_path, cfg.editor).await?;
+    println!(
+        "extract: {} chunks processed → {}",
+        chunks,
+        out_path.display()
+    );
+    Ok(())
 }
 
 async fn run_daemon() -> anyhow::Result<()> {

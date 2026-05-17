@@ -44,6 +44,44 @@ This launches a GUI wizard (egui) that walks through:
 
 The wizard writes a complete `config.toml` to `~/.config/localasr/config.toml` (Linux) or `%APPDATA%\localasr\config.toml` (Windows).
 
+## Term-database extraction
+
+To help the heavy editor pass disambiguate jargon and names, you can
+auto-generate a `terms.toml` from an existing corpus (your codebase, docs,
+or any text folder):
+
+```
+localasr extract path/to/folder
+```
+
+This scans the folder (respecting `.gitignore`), splits each text file into
+~8KB chunks, asks the configured editor endpoint to identify domain-specific
+terms, and writes a `terms.toml` to the path in your `[terms]` config
+section (default `~/.config/localasr/terms.toml`).
+
+Pass `--out <path>` to override the destination.
+
+The result is merged and deduplicated; entries look like:
+
+```toml
+[[terms]]
+name = "kubectl"
+aliases = ["cube control", "cube cuttle"]
+hint = "Kubernetes CLI"
+```
+
+Enable it in your config:
+
+```toml
+[terms]
+enabled = true
+path = "~/.config/localasr/terms.toml"
+```
+
+Extraction runs sequentially against the editor endpoint, so a large folder
+may take a while — each chunk is logged to stderr as it's processed.
+Per-chunk failures are logged but don't abort the run.
+
 ## Diagnostics
 
 Run `localasr doctor` after editing your config to verify all components work:

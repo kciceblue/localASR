@@ -3,6 +3,7 @@
 pub mod app;
 pub mod runtime;
 pub mod state;
+pub mod steps;
 
 use anyhow::Result;
 use app::WizardApp;

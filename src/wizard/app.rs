@@ -1,8 +1,9 @@
-//! egui app shell. Currently shows a placeholder screen with the current step
-//! name; real step rendering lands in Tasks 3+.
+//! egui app shell. Dispatches on `state.step` to the matching step renderer;
+//! steps not yet implemented fall through to a placeholder + nav footer.
 
 use crate::wizard::runtime::WizardRuntime;
-use crate::wizard::state::WizardState;
+use crate::wizard::state::{WizardState, WizardStep};
+use crate::wizard::steps;
 use eframe::egui;
 
 pub struct WizardApp {
@@ -24,9 +25,21 @@ impl eframe::App for WizardApp {
     // root `CentralPanel` is now provided automatically, so we render
     // directly into the supplied `Ui`.
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        ui.heading("localasr setup");
-        ui.label(format!("current step: {:?}", self.state.step));
-        ui.add_space(8.0);
-        ui.label("(individual steps land in later tasks)");
+        match self.state.step {
+            WizardStep::Welcome => steps::welcome::render(&mut self.state, ui),
+            WizardStep::Done => {
+                ui.heading("done");
+                ui.label("close this window and run `localasr daemon`.");
+            }
+            _ => {
+                ui.heading(format!("{:?}", self.state.step));
+                ui.label("(this step lands in a later task)");
+                if let Some(s) =
+                    steps::nav(ui, self.state.step.prev(), Some(self.state.step.next()))
+                {
+                    self.state.step = s;
+                }
+            }
+        }
     }
 }

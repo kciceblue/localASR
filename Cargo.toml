@@ -36,6 +36,7 @@ webrtc-vad = "0.4"
 hound = "3"
 eframe = { version = "0.34", default-features = false, features = ["default_fonts", "wgpu"] }
 ignore = "0.4"
+serde_json = "1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 evdev = { version = "0.13", features = ["tokio"] }
@@ -56,4 +57,3 @@ windows = { version = "0.59", features = [
 wiremock = "0.6"
 tempfile = "3"
 assert_matches = "1"
-serde_json = "1"

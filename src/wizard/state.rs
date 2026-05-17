@@ -64,9 +64,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn next_then_prev_returns_to_start() {
-        let s = WizardStep::Welcome;
-        assert_eq!(s.next().prev(), s);
+    fn next_then_prev_is_identity_on_non_terminal_steps() {
+        for s in [
+            WizardStep::Welcome,
+            WizardStep::Mic,
+            WizardStep::Asr,
+            WizardStep::Editor,
+            WizardStep::Hotkey,
+            WizardStep::Test,
+            WizardStep::Save,
+        ] {
+            let n = s.next();
+            // Done is terminal; everything before it should roundtrip.
+            assert_eq!(n.prev(), s, "round-trip failed at {s:?}");
+        }
     }
 
     #[test]

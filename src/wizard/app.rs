@@ -21,9 +21,9 @@ impl WizardApp {
 }
 
 impl eframe::App for WizardApp {
-    // eframe 0.34 replaced `update(ctx, frame)` with `ui(ui, frame)`: the
-    // root `CentralPanel` is now provided automatically, so we render
-    // directly into the supplied `Ui`.
+    // eframe 0.34's App::ui hands us a Ui already wrapped in a CentralPanel,
+    // so we render straight into it. (App::update still exists but is
+    // deprecated in favor of this.)
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         match self.state.step {
             WizardStep::Welcome => steps::welcome::render(&mut self.state, ui),

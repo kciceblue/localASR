@@ -1,0 +1,5 @@
+# Allow members of the `input` group to write to /dev/uinput (for localasr's
+# synthetic-input feature). Apply with:
+#   sudo cp 99-localasr.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"

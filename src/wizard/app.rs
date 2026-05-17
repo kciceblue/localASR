@@ -28,16 +28,18 @@ impl eframe::App for WizardApp {
     // so we render straight into it. (App::update still exists but is
     // deprecated in favor of this.)
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        // Force repaints so the level meter animates while we're on the mic step.
-        ui.ctx()
-            .request_repaint_after(std::time::Duration::from_millis(50));
-
         let nav_result = match self.state.step {
             WizardStep::Welcome => {
                 steps::welcome::render(&mut self.state, ui);
                 None
             }
-            WizardStep::Mic => steps::mic::render(&mut self.state, &mut self.mic, ui),
+            WizardStep::Mic => {
+                // Level meter animates — request frequent repaints only while
+                // we're on this step. Other steps stay idle until input.
+                ui.ctx()
+                    .request_repaint_after(std::time::Duration::from_millis(50));
+                steps::mic::render(&mut self.state, &mut self.mic, ui)
+            }
             WizardStep::Done => {
                 ui.heading("done");
                 ui.label("close this window and run `localasr daemon`.");

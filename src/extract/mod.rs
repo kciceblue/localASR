@@ -2,5 +2,6 @@
 //! by sending file chunks through the configured editor endpoint with a
 //! glossary-extraction prompt.
 
+pub mod chunker;
 pub mod scanner;
-// chunker, extractor, merger, run() land in later tasks.
+// extractor, merger, run() land in later tasks.

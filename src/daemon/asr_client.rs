@@ -3,7 +3,6 @@
 use crate::config::AsrConfig;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use bytes::Bytes;
 use serde::Deserialize;
 use std::time::Duration;
 
@@ -43,7 +42,7 @@ impl Asr for OpenAiAsr {
             .text("response_format", "json")
             .part(
                 "file",
-                reqwest::multipart::Part::bytes(Bytes::from(wav).to_vec())
+                reqwest::multipart::Part::bytes(wav)
                     .file_name("audio.wav")
                     .mime_str("audio/wav")?,
             );

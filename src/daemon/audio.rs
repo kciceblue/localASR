@@ -55,7 +55,10 @@ fn run(device_name: String, target_sr: u32, frames_tx: Sender<Vec<i16>>, stop_rx
             move |data: &[i16], _| {
                 let mono = downmix_i16(data, channels);
                 let resampled = resample_naive(&mono, source_sr, target_sr);
-                let _ = frames_tx_cb.send(resampled);
+                match frames_tx_cb.try_send(resampled) {
+                    Ok(()) => {}
+                    Err(_) => tracing::warn!("audio frames channel full; dropping frame"),
+                }
             },
             |e| tracing::error!("audio stream error: {e}"),
             None,
@@ -65,7 +68,10 @@ fn run(device_name: String, target_sr: u32, frames_tx: Sender<Vec<i16>>, stop_rx
             move |data: &[f32], _| {
                 let mono = downmix_f32(data, channels);
                 let resampled = resample_naive_f32(&mono, source_sr, target_sr);
-                let _ = frames_tx_cb.send(resampled);
+                match frames_tx_cb.try_send(resampled) {
+                    Ok(()) => {}
+                    Err(_) => tracing::warn!("audio frames channel full; dropping frame"),
+                }
             },
             |e| tracing::error!("audio stream error: {e}"),
             None,

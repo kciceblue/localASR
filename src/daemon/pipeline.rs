@@ -42,26 +42,22 @@ impl Pipeline {
                         }
                     };
                     chunks_text.push(raw);
-                    let polished = if self.cfg.editor.light.enabled {
+                    if self.cfg.editor.light.enabled {
                         let n = self.cfg.editor.light.context_chunks as usize;
                         let start = chunks_text.len().saturating_sub(n);
                         let window = &chunks_text[start..];
                         match self.editor.polish_light(window).await {
                             Ok(t) => {
-                                // The light pass returns the corrected version of the LAST chunk.
-                                *chunks_text.last_mut().unwrap() = t.clone();
-                                t
+                                // Light pass returns the corrected version of the LAST chunk.
+                                *chunks_text.last_mut().unwrap() = t;
                             }
                             Err(e) => {
                                 tracing::warn!("light editor failed: {e}; using raw ASR");
-                                chunks_text.last().cloned().unwrap_or_default()
                             }
                         }
-                    } else {
-                        chunks_text.last().cloned().unwrap_or_default()
-                    };
-                    // Compute the new full text and apply the diff.
-                    let _ = polished;
+                    }
+                    // Compute the new full text from chunks_text (which now has the polished
+                    // last chunk if the light pass succeeded).
                     let new_full = chunks_text.join(" ");
                     let diff = state.update(&new_full);
                     self.injector.apply(&diff, &saved).await?;

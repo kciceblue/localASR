@@ -98,15 +98,27 @@ pub fn render(
         );
     }
 
-    let next_ok = state
+    let has_transcript = state.test_transcript.is_some();
+    let passed = state
         .test_transcript
         .as_ref()
-        .map(|t| !t.starts_with("(error"))
+        .map(|t| !t.starts_with("(error") && !t.starts_with("(silence"))
         .unwrap_or(false);
+
+    if has_transcript && !passed {
+        ui.add_space(8.0);
+        // Spec: "Wizard refuses to save unless user explicitly overrides
+        // ('save anyway')". Surface that override only when verification
+        // failed (error or silence) — never when there's no attempt yet.
+        if ui.button("save anyway (skip verification)").clicked() {
+            return Some(WizardStep::Save);
+        }
+    }
+
     nav(
         ui,
         WizardStep::Hotkey,
-        if next_ok { Some(WizardStep::Save) } else { None },
+        if passed { Some(WizardStep::Save) } else { None },
     )
 }
 
@@ -139,7 +151,7 @@ async fn run_test(
     let asr_client = OpenAiAsr::new(asr)?;
     let raw = asr_client.transcribe(&samples).await?;
     if raw.trim().is_empty() {
-        return Ok("(error: silence — no speech detected)".into());
+        return Ok("(silence — no speech detected, try speaking louder)".into());
     }
 
     let editor_client = OpenAiEditor::new(editor)?;

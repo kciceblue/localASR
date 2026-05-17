@@ -99,31 +99,27 @@ fn run(
     Ok(())
 }
 
-fn rms_i16(data: &[i16], channels: usize) -> f32 {
+fn rms_i16(data: &[i16], _channels: usize) -> f32 {
     if data.is_empty() {
         return 0.0;
     }
     let mut sum = 0.0f32;
-    for c in data.chunks_exact(channels) {
-        let avg: f32 =
-            c.iter().map(|&x| x as f32 / 32768.0).sum::<f32>() / channels as f32;
-        sum += avg * avg;
+    for &s in data {
+        let x = s as f32 / 32768.0;
+        sum += x * x;
     }
-    let n = (data.len() / channels) as f32;
-    (sum / n).sqrt().min(1.0)
+    (sum / data.len() as f32).sqrt().min(1.0)
 }
 
-fn rms_f32(data: &[f32], channels: usize) -> f32 {
+fn rms_f32(data: &[f32], _channels: usize) -> f32 {
     if data.is_empty() {
         return 0.0;
     }
     let mut sum = 0.0f32;
-    for c in data.chunks_exact(channels) {
-        let avg: f32 = c.iter().sum::<f32>() / channels as f32;
-        sum += avg * avg;
+    for &s in data {
+        sum += s * s;
     }
-    let n = (data.len() / channels) as f32;
-    (sum / n).sqrt().min(1.0)
+    (sum / data.len() as f32).sqrt().min(1.0)
 }
 
 /// One-pole smoothing toward the new level. Coefficient chosen so the meter
@@ -147,6 +143,29 @@ mod tests {
         let s: Vec<i16> = vec![i16::MAX; 1000];
         // i16::MAX as f32 / 32768.0 ≈ 0.99997; squared and averaged stays just under 1.0
         assert!((rms_i16(&s, 1) - 0.99997).abs() < 0.001);
+    }
+
+    #[test]
+    fn rms_f32_silence_is_zero() {
+        assert_eq!(rms_f32(&vec![0.0f32; 1000], 1), 0.0);
+    }
+
+    #[test]
+    fn rms_f32_max_is_one() {
+        let s: Vec<f32> = vec![1.0; 1000];
+        assert!((rms_f32(&s, 1) - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn rms_f32_out_of_phase_stereo_not_zero() {
+        // Interleaved L,R,L,R,... with L = 0.5, R = -0.5. True RMS = 0.5 even
+        // though the channel-mean is zero. Pre-fix this returned 0.0.
+        let mut s = Vec::new();
+        for _ in 0..500 {
+            s.push(0.5);
+            s.push(-0.5);
+        }
+        assert!((rms_f32(&s, 2) - 0.5).abs() < 0.001);
     }
 
     #[test]

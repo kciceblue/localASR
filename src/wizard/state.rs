@@ -16,7 +16,10 @@ pub enum WizardStep {
 #[derive(Debug, Default, Clone)]
 pub struct WizardState {
     pub step: WizardStep,
-    // Fields land in later tasks as their steps need them.
+    /// Selected input device name; empty string = system default. Populated by
+    /// the Mic step and persisted across back/forward navigation.
+    pub mic_device: String,
+    // Additional fields land in later tasks as their steps need them.
 }
 
 impl Default for WizardStep {

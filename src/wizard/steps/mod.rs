@@ -1,3 +1,4 @@
+pub mod mic;
 pub mod welcome;
 
 use crate::wizard::state::WizardStep;

@@ -1,6 +1,7 @@
 //! `localasr setup` — interactive GUI wizard.
 
 pub mod app;
+pub mod level_meter;
 pub mod runtime;
 pub mod state;
 pub mod steps;

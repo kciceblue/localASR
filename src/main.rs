@@ -39,7 +39,8 @@ async fn run_doctor() -> anyhow::Result<()> {
     let config_path_for_check = config_path.clone();
 
     // Load config once if present so the later checks can be built from it.
-    let cfg_opt = if config_path.exists() {
+    let config_present = config_path.exists();
+    let cfg_opt = if config_present {
         Some(localasr::config::load(&config_path)?)
     } else {
         None
@@ -82,11 +83,12 @@ async fn run_doctor() -> anyhow::Result<()> {
         checks.push(Check::new("hotkey listener", move || async move {
             localasr::doctor::probes::hotkey_probe(p2).await
         }));
-    } else {
-        eprintln!("(config missing — skipping endpoint/audio/platform checks)");
     }
 
     println!("running localasr diagnostics:");
+    if !config_present {
+        eprintln!("(config missing — skipping endpoint/audio/platform checks)");
+    }
     let failures = run_all(checks).await;
     if failures == 0 {
         println!("\nall checks passed");

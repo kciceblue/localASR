@@ -53,17 +53,15 @@ pub fn walk(root: &Path) -> Result<impl Iterator<Item = Result<ScannedFile>>> {
 }
 
 fn read_text_file(path: PathBuf) -> Result<ScannedFile> {
-    let meta = std::fs::metadata(&path)
-        .with_context(|| format!("stat {}", path.display()))?;
-    if meta.len() > MAX_FILE_BYTES {
+    let bytes = std::fs::read(&path)
+        .with_context(|| format!("read {}", path.display()))?;
+    if bytes.len() as u64 > MAX_FILE_BYTES {
         anyhow::bail!(
             "skipped (over {} bytes): {}",
             MAX_FILE_BYTES,
             path.display()
         );
     }
-    let bytes = std::fs::read(&path)
-        .with_context(|| format!("read {}", path.display()))?;
     if !looks_like_text(&bytes) {
         anyhow::bail!("skipped (binary): {}", path.display());
     }

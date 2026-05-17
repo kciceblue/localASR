@@ -47,8 +47,21 @@ pub fn save(db: &TermDb, path: &Path) -> Result<()> {
     }
     let text = toml::to_string_pretty(db)
         .context("serialize TermDb to TOML")?;
-    std::fs::write(path, text)
-        .with_context(|| format!("write {}", path.display()))?;
+    // Atomic: write to a sibling temp file, then rename. `rename` on the same
+    // filesystem is atomic, so a crash leaves either the old file or the new
+    // file — never a partial.
+    let tmp_path = match path.extension() {
+        Some(ext) => {
+            let mut ext_s = ext.to_os_string();
+            ext_s.push(".tmp");
+            path.with_extension(ext_s)
+        }
+        None => path.with_extension("tmp"),
+    };
+    std::fs::write(&tmp_path, text)
+        .with_context(|| format!("write {}", tmp_path.display()))?;
+    std::fs::rename(&tmp_path, path)
+        .with_context(|| format!("rename {} → {}", tmp_path.display(), path.display()))?;
     Ok(())
 }
 
@@ -154,5 +167,17 @@ extra = "nope"
         let db = TermDb { entries: vec![] };
         save(&db, &nested).unwrap();
         assert!(nested.exists());
+    }
+
+    #[test]
+    fn save_overwrites_existing_file() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), "old contents").unwrap();
+        let db = TermDb {
+            entries: vec![Term { name: "new".into(), aliases: vec![], hint: "".into() }],
+        };
+        save(&db, tmp.path()).unwrap();
+        let loaded = load(tmp.path()).unwrap();
+        assert_eq!(loaded.entries[0].name, "new");
     }
 }

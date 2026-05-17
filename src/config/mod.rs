@@ -1,4 +1,5 @@
 pub mod schema;
+pub use schema::*;
 
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};

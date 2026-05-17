@@ -135,3 +135,77 @@ restore_delay_ms = 100
         assert!(config_probe(tmp.path().to_path_buf()).await.is_err());
     }
 }
+
+use crate::config::EditorConfig;
+use crate::daemon::editor_client::{Editor, OpenAiEditor};
+
+/// Probe: ask the editor endpoint to polish a trivial string. Verify a 2xx
+/// response and a non-empty completion. Term DB is intentionally not exercised
+/// here — that lands as a separate probe in Plan 4 with the `extract` work.
+pub async fn editor_probe(cfg: EditorConfig) -> Result<()> {
+    let client = OpenAiEditor::new(cfg).context("constructing editor client")?;
+    let out = client.polish_heavy("hello", None).await.context("editor endpoint round-trip")?;
+    if out.is_empty() {
+        anyhow::bail!("editor returned an empty completion");
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod editor_tests {
+    use super::*;
+    use crate::config::EditorPassConfig;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    fn cfg(base: &str) -> EditorConfig {
+        EditorConfig {
+            base_url: base.into(),
+            api_key: "sk-test".into(),
+            model: "gpt-4o-mini".into(),
+            light_temperature: 0.0,
+            heavy_temperature: 0.2,
+            light_timeout_ms: 3000,
+            heavy_timeout_ms: 10000,
+            light: EditorPassConfig { enabled: true, context_chunks: 3, system_prompt: "".into() },
+            heavy: EditorPassConfig { enabled: true, context_chunks: 0, system_prompt: "".into() },
+        }
+    }
+
+    fn ok_response(text: &str) -> ResponseTemplate {
+        ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "choices": [{ "message": { "role": "assistant", "content": text } }]
+        }))
+    }
+
+    #[tokio::test]
+    async fn editor_probe_passes_on_non_empty_completion() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/chat/completions"))
+            .respond_with(ok_response("hi back."))
+            .mount(&server).await;
+        assert!(editor_probe(cfg(&server.uri())).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn editor_probe_fails_on_empty_completion() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/chat/completions"))
+            .respond_with(ok_response(""))
+            .mount(&server).await;
+        let err = editor_probe(cfg(&server.uri())).await.unwrap_err();
+        assert!(err.to_string().contains("empty"));
+    }
+
+    #[tokio::test]
+    async fn editor_probe_fails_on_5xx() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/chat/completions"))
+            .respond_with(ResponseTemplate::new(500).set_body_string("boom"))
+            .mount(&server).await;
+        assert!(editor_probe(cfg(&server.uri())).await.is_err());
+    }
+}

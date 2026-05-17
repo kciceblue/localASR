@@ -64,7 +64,8 @@ mod tests {
         let mut s = TypedState::new();
         s.update("hello wrold");
         let d = s.update("hello world");
-        assert_eq!(d, Diff { backspace_count: 5, append: "world".into() });
+        // Common prefix is "hello w" (7 chars); diff replaces the trailing "rold" with "orld".
+        assert_eq!(d, Diff { backspace_count: 4, append: "orld".into() });
     }
 
     #[test]

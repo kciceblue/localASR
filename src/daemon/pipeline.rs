@@ -2,7 +2,7 @@
 //! + light editor per chunk, runs heavy editor on close. Applies every text
 //! change via the Injector.
 
-use crate::config::{Config, EditorConfig};
+use crate::config::Config;
 use crate::daemon::asr_client::Asr;
 use crate::daemon::editor_client::Editor;
 use crate::daemon::injector::Injector;
@@ -92,13 +92,10 @@ impl Pipeline {
     }
 }
 
-#[allow(dead_code)]
-fn _enforce_editor_config_lifetime(c: &EditorConfig) -> &str { &c.model }
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{AsrConfig, AudioConfig, EditorPassConfig, HotkeyConfig, InjectionConfig, TermsConfig, VadBackend, VadConfig};
+    use crate::config::{AsrConfig, AudioConfig, EditorConfig, EditorPassConfig, HotkeyConfig, InjectionConfig, TermsConfig, VadBackend, VadConfig};
     use crate::daemon::vad::{ChunkEvent, EndReason};
     use crate::platform::mock::MockPlatform;
     use async_trait::async_trait;

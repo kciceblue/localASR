@@ -209,3 +209,25 @@ mod editor_tests {
         assert!(editor_probe(cfg(&server.uri())).await.is_err());
     }
 }
+
+use crate::daemon::audio::AudioCapture;
+use std::time::Duration;
+
+/// Probe: open the configured audio device and verify at least one frame
+/// arrives within 2 seconds. Reports failure if the device can't be opened
+/// or if it stays silent (no frames at all — usually means the device is busy
+/// or the user has no input device).
+pub async fn mic_probe(device_name: &str) -> Result<()> {
+    let device_name = device_name.to_string();
+    // AudioCapture::start is sync but spawns a thread; the cpal stream pumps
+    // frames via crossbeam-channel. Poll the receiver from a blocking task.
+    tokio::task::spawn_blocking(move || -> Result<()> {
+        let cap = AudioCapture::start(&device_name, 16000)
+            .context("opening audio device")?;
+        let got = cap.frames.recv_timeout(Duration::from_secs(2));
+        cap.stop();
+        got.map(|_| ()).context("no audio frames within 2s (device silent or busy?)")
+    })
+    .await
+    .context("mic probe task panicked")?
+}

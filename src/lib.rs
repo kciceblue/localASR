@@ -3,6 +3,7 @@
 pub mod config;
 pub mod daemon;
 pub mod doctor;
+pub mod extract;
 pub mod platform;
 pub mod terms;
 pub mod wizard;

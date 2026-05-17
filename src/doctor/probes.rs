@@ -231,3 +231,49 @@ pub async fn mic_probe(device_name: &str) -> Result<()> {
     .await
     .context("mic probe task panicked")?
 }
+
+use crate::platform::{ClipboardSnapshot, Platform};
+use std::sync::Arc;
+
+/// Probe: read and write the clipboard via the configured platform. This
+/// catches Linux-Wayland permission issues and Windows `OpenClipboard` errors.
+pub async fn paste_probe(platform: Arc<dyn Platform>) -> Result<()> {
+    let original = platform.read_clipboard().await
+        .context("reading clipboard (is the display server reachable?)")?;
+    let probe_value = ClipboardSnapshot(Some("localasr-doctor-probe".to_string()));
+    platform.write_clipboard(&probe_value).await
+        .context("writing clipboard")?;
+    platform.write_clipboard(&original).await
+        .context("restoring clipboard")?;
+    Ok(())
+}
+
+/// Probe: try to start a hotkey listener for a sentinel binding ("F12" — the
+/// highest-numbered F-key accepted by our binding parser, unlikely to be in
+/// normal use). Success means the listener thread started without erroring
+/// (uinput permissions OK on Linux, hook installation OK on Windows).
+/// The receiver is dropped immediately — we don't wait for events.
+pub async fn hotkey_probe(platform: Arc<dyn Platform>) -> Result<()> {
+    let _rx = platform.hotkey_stream("F12")
+        .context("starting hotkey listener (check /dev/input permissions on Linux)")?;
+    // _rx is dropped here, stopping the listener thread on next iteration.
+    Ok(())
+}
+
+#[cfg(test)]
+mod platform_probe_tests {
+    use super::*;
+    use crate::platform::mock::MockPlatform;
+
+    #[tokio::test]
+    async fn paste_probe_passes_with_mock() {
+        let p = MockPlatform::new();
+        assert!(paste_probe(p).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn hotkey_probe_passes_with_mock() {
+        let p = MockPlatform::new();
+        assert!(hotkey_probe(p).await.is_ok());
+    }
+}

@@ -7,7 +7,8 @@ use tokio::sync::mpsc;
 
 #[cfg(target_os = "linux")]
 pub mod linux;
-// FIXME(Task 13): pub mod windows;
+#[cfg(target_os = "windows")]
+pub mod windows;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum HotkeyEvent {

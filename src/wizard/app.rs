@@ -13,6 +13,7 @@ pub struct WizardApp {
     pub mic: MicStepState,
     pub asr: steps::asr::AsrStepState,
     pub editor: steps::editor::EditorStepState,
+    pub hotkey: steps::hotkey::HotkeyStepState,
 }
 
 impl WizardApp {
@@ -23,6 +24,7 @@ impl WizardApp {
             mic: MicStepState::default(),
             asr: steps::asr::AsrStepState::default(),
             editor: steps::editor::EditorStepState::default(),
+            hotkey: steps::hotkey::HotkeyStepState::default(),
         }
     }
 }
@@ -53,6 +55,12 @@ impl eframe::App for WizardApp {
                 &self.runtime.handle,
                 ui,
             ),
+            WizardStep::Hotkey => {
+                // Bind ctx separately — passing `ui.ctx()` inline with `ui`
+                // tries to borrow `ui` both immutably and mutably.
+                let ctx = ui.ctx().clone();
+                steps::hotkey::render(&mut self.state, &mut self.hotkey, &ctx, ui)
+            }
             WizardStep::Done => {
                 ui.heading("done");
                 ui.label("close this window and run `localasr daemon`.");

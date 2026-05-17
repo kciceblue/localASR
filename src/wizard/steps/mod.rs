@@ -1,5 +1,6 @@
 pub mod asr;
 pub mod editor;
+pub mod hotkey;
 pub mod mic;
 pub mod welcome;
 

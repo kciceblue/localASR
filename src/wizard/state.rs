@@ -1,7 +1,10 @@
 //! Wizard state machine and collected values. Steps mutate this; on save it
 //! serializes to a `Config`.
 
-use crate::config::{AsrConfig, EditorConfig, EditorPassConfig};
+use crate::config::{
+    AsrConfig, AudioConfig, Config, EditorConfig, EditorPassConfig, HotkeyConfig, InjectionConfig,
+    TermsConfig, VadBackend, VadConfig,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WizardStep {
@@ -94,6 +97,37 @@ impl WizardState {
             },
         }
     }
+
+    /// Build a complete Config from the values the wizard collected.
+    /// Fields not surfaced in the UI get sensible defaults aligned with the
+    /// daemon's documented defaults.
+    pub fn to_config(&self) -> Config {
+        Config {
+            hotkey: HotkeyConfig {
+                binding: self.hotkey_binding.clone(),
+            },
+            audio: AudioConfig {
+                device: self.mic_device.clone(),
+                sample_rate: 16000,
+            },
+            vad: VadConfig {
+                backend: VadBackend::Silero,
+                min_silence_ms: 400,
+                max_chunk_ms: 5000,
+            },
+            asr: self.to_asr_config(15000),
+            editor: self.to_editor_config(4000, 15000),
+            terms: TermsConfig {
+                enabled: false,
+                path: "~/.config/localasr/terms.toml".into(),
+            },
+            injection: InjectionConfig {
+                mode: "clipboard_paste".into(),
+                paste_shortcut: "Ctrl+V".into(),
+                restore_delay_ms: 100,
+            },
+        }
+    }
 }
 
 impl WizardStep {
@@ -153,5 +187,24 @@ mod tests {
     #[test]
     fn welcome_prev_is_self() {
         assert_eq!(WizardStep::Welcome.prev(), WizardStep::Welcome);
+    }
+}
+
+#[cfg(test)]
+mod cfg_tests {
+    use super::*;
+
+    #[test]
+    fn to_config_round_trips_through_toml() {
+        let mut s = WizardState::new();
+        s.asr_api_key = "sk-test".into();
+        s.editor_api_key = "sk-test".into();
+        s.hotkey_binding = "F8".into();
+        let cfg = s.to_config();
+        let serialized = toml::to_string(&cfg).unwrap();
+        let parsed: crate::config::Config = toml::from_str(&serialized).unwrap();
+        assert_eq!(parsed.hotkey.binding, "F8");
+        assert_eq!(parsed.asr.model, "whisper-1");
+        assert_eq!(parsed.editor.model, "gpt-4o-mini");
     }
 }

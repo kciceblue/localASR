@@ -1,5 +1,4 @@
-//! egui app shell. Dispatches on `state.step` to the matching step renderer;
-//! steps not yet implemented fall through to a placeholder + nav footer.
+//! egui app shell. Dispatches on `state.step` to the matching step renderer.
 
 use crate::wizard::runtime::WizardRuntime;
 use crate::wizard::state::{WizardState, WizardStep};
@@ -15,6 +14,7 @@ pub struct WizardApp {
     pub editor: steps::editor::EditorStepState,
     pub hotkey: steps::hotkey::HotkeyStepState,
     pub test: steps::test::TestStepState,
+    pub save: steps::save::SaveStepState,
 }
 
 impl WizardApp {
@@ -27,6 +27,7 @@ impl WizardApp {
             editor: steps::editor::EditorStepState::default(),
             hotkey: steps::hotkey::HotkeyStepState::default(),
             test: steps::test::TestStepState::default(),
+            save: steps::save::SaveStepState::default(),
         }
     }
 }
@@ -66,15 +67,11 @@ impl eframe::App for WizardApp {
             WizardStep::Test => {
                 steps::test::render(&mut self.state, &mut self.test, &self.runtime.handle, ui)
             }
+            WizardStep::Save => steps::save::render(&mut self.state, &mut self.save, ui),
             WizardStep::Done => {
                 ui.heading("done");
                 ui.label("close this window and run `localasr daemon`.");
                 None
-            }
-            _ => {
-                ui.heading(format!("{:?}", self.state.step));
-                ui.label("(this step lands in a later task)");
-                steps::nav(ui, self.state.step.prev(), Some(self.state.step.next()))
             }
         };
 

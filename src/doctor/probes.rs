@@ -3,6 +3,8 @@
 
 use anyhow::{Context, Result};
 use std::path::PathBuf;
+use crate::config::AsrConfig;
+use crate::daemon::asr_client::{Asr, OpenAiAsr};
 
 /// Probe: the config file exists at the given path and parses successfully.
 pub async fn config_probe(path: PathBuf) -> Result<()> {
@@ -12,6 +14,52 @@ pub async fn config_probe(path: PathBuf) -> Result<()> {
     crate::config::load(&path)
         .with_context(|| format!("parsing {}", path.display()))?;
     Ok(())
+}
+
+/// Probe: send 0.5s of silence to the ASR endpoint and verify a 2xx response.
+/// The returned text is allowed to be empty (silence -> empty is fine).
+pub async fn asr_probe(cfg: AsrConfig) -> Result<()> {
+    let client = OpenAiAsr::new(cfg).context("constructing ASR client")?;
+    let silence = vec![0i16; 8000]; // 0.5s at 16kHz
+    client.transcribe(&silence).await.context("ASR endpoint round-trip")?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod asr_tests {
+    use super::*;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    fn cfg(base: &str) -> AsrConfig {
+        AsrConfig {
+            base_url: base.into(),
+            api_key: "sk-test".into(),
+            model: "whisper-1".into(),
+            language: "".into(),
+            timeout_ms: 5000,
+        }
+    }
+
+    #[tokio::test]
+    async fn asr_probe_passes_on_2xx() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/audio/transcriptions"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"text": ""})))
+            .mount(&server).await;
+        assert!(asr_probe(cfg(&server.uri())).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn asr_probe_fails_on_5xx() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/audio/transcriptions"))
+            .respond_with(ResponseTemplate::new(500).set_body_string("boom"))
+            .mount(&server).await;
+        assert!(asr_probe(cfg(&server.uri())).await.is_err());
+    }
 }
 
 #[cfg(test)]

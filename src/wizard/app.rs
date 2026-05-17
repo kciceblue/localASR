@@ -14,6 +14,7 @@ pub struct WizardApp {
     pub asr: steps::asr::AsrStepState,
     pub editor: steps::editor::EditorStepState,
     pub hotkey: steps::hotkey::HotkeyStepState,
+    pub test: steps::test::TestStepState,
 }
 
 impl WizardApp {
@@ -25,6 +26,7 @@ impl WizardApp {
             asr: steps::asr::AsrStepState::default(),
             editor: steps::editor::EditorStepState::default(),
             hotkey: steps::hotkey::HotkeyStepState::default(),
+            test: steps::test::TestStepState::default(),
         }
     }
 }
@@ -60,6 +62,9 @@ impl eframe::App for WizardApp {
                 // tries to borrow `ui` both immutably and mutably.
                 let ctx = ui.ctx().clone();
                 steps::hotkey::render(&mut self.state, &mut self.hotkey, &ctx, ui)
+            }
+            WizardStep::Test => {
+                steps::test::render(&mut self.state, &mut self.test, &self.runtime.handle, ui)
             }
             WizardStep::Done => {
                 ui.heading("done");

@@ -2,6 +2,7 @@ pub mod asr;
 pub mod editor;
 pub mod hotkey;
 pub mod mic;
+pub mod test;
 pub mod welcome;
 
 use crate::wizard::state::WizardStep;

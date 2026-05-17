@@ -6,7 +6,6 @@ use eframe::egui;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot;
 
-use crate::config::AsrConfig;
 use crate::doctor::probes::asr_probe;
 use crate::wizard::state::{WizardState, WizardStep};
 use crate::wizard::steps::nav;
@@ -66,13 +65,7 @@ pub fn render(
         egui::Button::new(if testing { "testing…" } else { "test" }),
     );
     if test_btn.clicked() {
-        let cfg = AsrConfig {
-            base_url: state.asr_base_url.clone(),
-            api_key: state.asr_api_key.clone(),
-            model: state.asr_model.clone(),
-            language: "".into(),
-            timeout_ms: 10000,
-        };
+        let cfg = state.to_asr_config(10000);
         let (tx, rx) = oneshot::channel();
         rt_handle.spawn(async move {
             let result = asr_probe(cfg).await.map_err(|e| format!("{e:#}"));

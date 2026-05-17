@@ -6,7 +6,6 @@ use eframe::egui;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot;
 
-use crate::config::{EditorConfig, EditorPassConfig};
 use crate::doctor::probes::editor_probe;
 use crate::wizard::state::{WizardState, WizardStep};
 use crate::wizard::steps::nav;
@@ -72,25 +71,7 @@ pub fn render(
         egui::Button::new(if testing { "testing…" } else { "test" }),
     );
     if test_btn.clicked() {
-        let cfg = EditorConfig {
-            base_url: state.editor_base_url.clone(),
-            api_key: state.editor_api_key.clone(),
-            model: state.editor_model.clone(),
-            light_temperature: 0.0,
-            heavy_temperature: 0.2,
-            light_timeout_ms: 5000,
-            heavy_timeout_ms: 15000,
-            light: EditorPassConfig {
-                enabled: true,
-                context_chunks: 3,
-                system_prompt: "".into(),
-            },
-            heavy: EditorPassConfig {
-                enabled: true,
-                context_chunks: 0,
-                system_prompt: "".into(),
-            },
-        };
+        let cfg = state.to_editor_config(5000, 15000);
         let (tx, rx) = oneshot::channel();
         rt_handle.spawn(async move {
             let result = editor_probe(cfg).await.map_err(|e| format!("{e:#}"));

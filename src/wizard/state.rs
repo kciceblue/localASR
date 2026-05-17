@@ -1,6 +1,8 @@
 //! Wizard state machine and collected values. Steps mutate this; on save it
 //! serializes to a `Config`.
 
+use crate::config::{AsrConfig, EditorConfig, EditorPassConfig};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WizardStep {
     Welcome,
@@ -54,6 +56,42 @@ impl WizardState {
             editor_model: "gpt-4o-mini".into(),
             hotkey_binding: "RightCtrl".into(),
             ..Default::default()
+        }
+    }
+
+    /// Build an AsrConfig for probing or one-shot use.
+    /// `timeout_ms` is the only thing that varies per call site.
+    pub fn to_asr_config(&self, timeout_ms: u64) -> AsrConfig {
+        AsrConfig {
+            base_url: self.asr_base_url.clone(),
+            api_key: self.asr_api_key.clone(),
+            model: self.asr_model.clone(),
+            language: String::new(),
+            timeout_ms,
+        }
+    }
+
+    /// Build an EditorConfig for probing or one-shot use.
+    /// `light_timeout_ms` / `heavy_timeout_ms` vary per call site.
+    pub fn to_editor_config(&self, light_timeout_ms: u64, heavy_timeout_ms: u64) -> EditorConfig {
+        EditorConfig {
+            base_url: self.editor_base_url.clone(),
+            api_key: self.editor_api_key.clone(),
+            model: self.editor_model.clone(),
+            light_temperature: 0.0,
+            heavy_temperature: 0.2,
+            light_timeout_ms,
+            heavy_timeout_ms,
+            light: EditorPassConfig {
+                enabled: true,
+                context_chunks: 3,
+                system_prompt: String::new(),
+            },
+            heavy: EditorPassConfig {
+                enabled: true,
+                context_chunks: 0,
+                system_prompt: String::new(),
+            },
         }
     }
 }

@@ -6,7 +6,7 @@ use std::time::Duration;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot;
 
-use crate::config::{AsrConfig, EditorConfig, EditorPassConfig};
+use crate::config::{AsrConfig, EditorConfig};
 use crate::daemon::asr_client::{Asr, OpenAiAsr};
 use crate::daemon::audio::AudioCapture;
 use crate::daemon::editor_client::{Editor, OpenAiEditor};
@@ -69,32 +69,12 @@ pub fn render(
         .clicked()
     {
         let device = state.mic_device.clone();
-        let asr_cfg = AsrConfig {
-            base_url: state.asr_base_url.clone(),
-            api_key: state.asr_api_key.clone(),
-            model: state.asr_model.clone(),
-            language: "".into(),
-            timeout_ms: 30000,
-        };
-        let editor_cfg = EditorConfig {
-            base_url: state.editor_base_url.clone(),
-            api_key: state.editor_api_key.clone(),
-            model: state.editor_model.clone(),
-            light_temperature: 0.0,
-            heavy_temperature: 0.2,
-            light_timeout_ms: 5000,
-            heavy_timeout_ms: 20000,
-            light: EditorPassConfig {
-                enabled: true,
-                context_chunks: 3,
-                system_prompt: "".into(),
-            },
-            heavy: EditorPassConfig {
-                enabled: true,
-                context_chunks: 0,
-                system_prompt: "".into(),
-            },
-        };
+        // Generous 30s ASR timeout — the test captures up to RECORD_SECONDS of
+        // audio, and the upload+inference can stretch on a slow network.
+        let asr_cfg = state.to_asr_config(30000);
+        // Heavy pass gets 20s here (vs 15s in the editor probe) to cover the
+        // larger payload coming out of a full 5s utterance.
+        let editor_cfg = state.to_editor_config(5000, 20000);
         let (tx, rx) = oneshot::channel();
         rt_handle.spawn(async move {
             let result = run_test(device, asr_cfg, editor_cfg)
@@ -159,7 +139,7 @@ async fn run_test(
     let asr_client = OpenAiAsr::new(asr)?;
     let raw = asr_client.transcribe(&samples).await?;
     if raw.trim().is_empty() {
-        return Ok("(silence — no speech detected)".into());
+        return Ok("(error: silence — no speech detected)".into());
     }
 
     let editor_client = OpenAiEditor::new(editor)?;

@@ -239,6 +239,14 @@ mod tests {
         assert_eq!(strip_code_fence(r#"{"terms":[]}"#), r#"{"terms":[]}"#);
     }
 
+    #[test]
+    fn strip_code_fence_unclosed_passes_through_inner() {
+        // Model emits an opening fence but forgets the closing one. We should
+        // still return the JSON body (without the opening fence).
+        let raw = "```json\n{\"terms\":[]}";
+        assert_eq!(strip_code_fence(raw).trim(), "{\"terms\":[]}");
+    }
+
     #[tokio::test]
     async fn extract_happy_path_returns_terms() {
         let server = MockServer::start().await;

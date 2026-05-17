@@ -3,5 +3,6 @@
 //! glossary-extraction prompt.
 
 pub mod chunker;
+pub mod merger;
 pub mod scanner;
-// extractor, merger, run() land in later tasks.
+// extractor, run() land in later tasks.

@@ -38,6 +38,20 @@ pub fn render_prompt_block(db: &TermDb) -> String {
     out
 }
 
+/// Serialize `db` as TOML and write it atomically to `path`.
+/// Creates parent directories as needed.
+pub fn save(db: &TermDb, path: &Path) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("create dir {}", parent.display()))?;
+    }
+    let text = toml::to_string_pretty(db)
+        .context("serialize TermDb to TOML")?;
+    std::fs::write(path, text)
+        .with_context(|| format!("write {}", path.display()))?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,5 +129,30 @@ extra = "nope"
         };
         let s = render_prompt_block(&db);
         assert_eq!(s.trim(), "bare");
+    }
+
+    #[test]
+    fn save_then_load_roundtrips() {
+        let db = TermDb {
+            entries: vec![
+                Term { name: "kubectl".into(), aliases: vec!["cube control".into()], hint: "k8s cli".into() },
+                Term { name: "tokio".into(), aliases: vec![], hint: "".into() },
+            ],
+        };
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        save(&db, tmp.path()).unwrap();
+        let loaded = load(tmp.path()).unwrap();
+        assert_eq!(loaded.entries.len(), 2);
+        assert_eq!(loaded.entries[0].name, "kubectl");
+        assert_eq!(loaded.entries[1].aliases, Vec::<String>::new());
+    }
+
+    #[test]
+    fn save_creates_parent_dirs() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let nested = tmp.path().join("a").join("b").join("terms.toml");
+        let db = TermDb { entries: vec![] };
+        save(&db, &nested).unwrap();
+        assert!(nested.exists());
     }
 }

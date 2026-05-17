@@ -35,17 +35,19 @@ pub fn interpolate_env(s: &str) -> Result<String> {
             continue;
         }
         if c == b'$' && i + 1 < bytes.len() && bytes[i + 1] == b'{' {
-            if let Some(end) = s[i + 2..].find('}') {
-                let name = &s[i + 2..i + 2 + end];
-                let val = std::env::var(name)
-                    .with_context(|| format!("env var ${{{name}}} not set"))?;
-                out.push_str(&val);
-                i = i + 2 + end + 1;
-                continue;
-            }
+            let end = s[i + 2..]
+                .find('}')
+                .with_context(|| format!("unclosed ${{ at byte {i}"))?;
+            let name = &s[i + 2..i + 2 + end];
+            let val = std::env::var(name)
+                .with_context(|| format!("env var ${{{name}}} not set"))?;
+            out.push_str(&val);
+            i = i + 2 + end + 1;
+            continue;
         }
-        out.push(c as char);
-        i += 1;
+        let ch = s[i..].chars().next().expect("valid UTF-8 slice");
+        out.push(ch);
+        i += ch.len_utf8();
     }
     Ok(out)
 }
@@ -103,6 +105,18 @@ mod tests {
         let err = load(tmp.path()).unwrap_err();
         let full = format!("{err:#}");
         assert!(full.to_lowercase().contains("unknown") || full.contains("bogus"));
+    }
+
+    #[test]
+    fn non_ascii_passes_through_unchanged() {
+        assert_eq!(interpolate_env("café").unwrap(), "café");
+        assert_eq!(interpolate_env("\u{1F600}").unwrap(), "\u{1F600}");
+    }
+
+    #[test]
+    fn unclosed_brace_errors() {
+        let err = interpolate_env("${UNCLOSED").unwrap_err();
+        assert!(format!("{err:#}").to_lowercase().contains("unclosed"));
     }
 
     const MINIMAL_CONFIG: &str = r#"

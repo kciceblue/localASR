@@ -46,9 +46,10 @@ fn build_chord(mods: egui::Modifiers, key: Option<&'static str>) -> String {
     if mods.alt {
         parts.push("Alt");
     }
-    // `command` covers ⌘ on macOS and Ctrl-as-command elsewhere; `mac_cmd` is
-    // mac-only. Either signals the Meta/Super key as far as our parser cares.
-    if mods.mac_cmd || mods.command {
+    // Only `mac_cmd` represents a genuine ⌘. egui's cross-platform `command`
+    // field aliases to `ctrl` on Linux/Windows and to `mac_cmd` on macOS, so
+    // honoring it here would double-count Ctrl as Meta on non-mac platforms.
+    if mods.mac_cmd {
         parts.push("Meta");
     }
     if let Some(k) = key {
@@ -86,7 +87,7 @@ pub fn render(
     if step_state.capturing {
         ui.colored_label(
             egui::Color32::from_rgb(220, 180, 80),
-            "listening… press a key",
+            "listening… press a key (Esc to cancel)",
         );
         ctx.input(|i| {
             for ev in &i.events {
@@ -97,6 +98,10 @@ pub fn render(
                     ..
                 } = ev
                 {
+                    if *key == egui::Key::Escape {
+                        step_state.capturing = false;
+                        break;
+                    }
                     if let Some(name) = key_to_binding_name(*key) {
                         state.hotkey_binding = build_chord(*modifiers, Some(name));
                         step_state.capturing = false;
@@ -145,5 +150,26 @@ mod tests {
             build_chord(egui::Modifiers::default(), Some("F8")),
             "F8"
         );
+    }
+
+    #[test]
+    fn ctrl_does_not_emit_meta_on_linux() {
+        // egui's `command` aliases to `ctrl` on non-mac platforms; make sure we
+        // don't double-count it as Meta.
+        let mods = egui::Modifiers {
+            ctrl: true,
+            command: true, // egui sets this together with ctrl on non-mac
+            ..Default::default()
+        };
+        assert_eq!(build_chord(mods, Some("F1")), "Ctrl+F1");
+    }
+
+    #[test]
+    fn key_to_binding_name_covers_supported_keys() {
+        assert_eq!(key_to_binding_name(egui::Key::F1), Some("F1"));
+        assert_eq!(key_to_binding_name(egui::Key::F12), Some("F12"));
+        assert_eq!(key_to_binding_name(egui::Key::Space), Some("Space"));
+        assert_eq!(key_to_binding_name(egui::Key::A), None);
+        assert_eq!(key_to_binding_name(egui::Key::ArrowUp), None);
     }
 }
